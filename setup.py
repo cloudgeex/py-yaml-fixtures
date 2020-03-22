@@ -1,15 +1,13 @@
 from setuptools import setup, find_packages
 
-
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
-
 
 setup(
     name='Py-YAML-Fixtures',
     version='0.6.0',
     description='Load Django and SQLAlchemy database fixtures '
-                'from Jinja-templated YAML files',
+    'from Jinja-templated YAML files',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/briancappello/py-yaml-fixtures',
@@ -27,7 +25,7 @@ setup(
     ],
     packages=find_packages(exclude=['django_test_app', 'docs', 'tests']),
     install_requires=[
-        'faker>=1.0.7',
+        'faker==4.0.2',
         'jinja2>=2.10.1',
         'networkx>=2.3',
         'python-dateutil>=2.8.0',
