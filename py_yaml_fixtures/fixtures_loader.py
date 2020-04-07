@@ -18,6 +18,7 @@ from .types import Identifier
 from .utils import normalize_identifiers, random_model, random_models
 
 MULTI_CLASS_FILENAMES = {'fixtures.yml', 'fixtures.yaml'}
+REQUIRED_FILENAMES = {'required.yml', 'required.yaml'}
 
 
 class FixturesLoader:
@@ -38,7 +39,8 @@ class FixturesLoader:
             self,
             factory: FactoryInterface,
             fixture_dirs: List[str],
-            env: Optional[jinja2.Environment] = None
+            env: Optional[jinja2.Environment] = None,
+            **kwargs
     ):
         self.env = self._ensure_env(env)
         """The Jinja Environment used for rendering the yaml template files."""
@@ -59,6 +61,7 @@ class FixturesLoader:
         self._file_cache = {}
         self._data_cache = defaultdict(dict)
         self._loaded = False
+        self.file_names = kwargs.pop('file_names', MULTI_CLASS_FILENAMES)
 
     def create_all(self, progress_callback: Optional[callable] = None
                    ) -> Dict[str, object]:
@@ -81,7 +84,7 @@ class FixturesLoader:
 
             dag.add_node(model_class_name)
             for dep in dependencies:
-                # Model does not depends on self model reference
+                # Model does not depends on itself
                 if model_class_name != dep:  # avoid cyclic graph
                     dag.add_edge(model_class_name, dep)
 
@@ -153,6 +156,14 @@ class FixturesLoader:
         # list of identifier keys from it
         for fixtures_dir in self.fixture_dirs:
             for filename in os.listdir(fixtures_dir):
+                if self.file_names != MULTI_CLASS_FILENAMES:
+                    if filename not in self.file_names:
+                        continue
+
+                if self.file_names == MULTI_CLASS_FILENAMES:
+                    if filename in REQUIRED_FILENAMES:
+                        continue
+
                 filepath = os.path.join(fixtures_dir, filename)
                 file_ext = filename[filename.find('.') + 1:]
 
@@ -167,7 +178,7 @@ class FixturesLoader:
                         rendered_yaml = env.get_template(filepath).render()
                         data = yaml.load(rendered_yaml, Loader=yaml.FullLoader)
                         if data:
-                            if filename in MULTI_CLASS_FILENAMES:
+                            if filename in self.file_names:
                                 for class_name in data:
                                     model_identifiers[class_name] = list(
                                         data[class_name].keys()
@@ -195,10 +206,9 @@ class FixturesLoader:
             model_identifiers=model_identifiers
         )
         data = yaml.load(rendered_yaml, Loader=yaml.FullLoader)
-
         identifier_data = {}
         filename = os.path.basename(filepath)
-        if filename in MULTI_CLASS_FILENAMES:
+        if filename in self.file_names:
             for class_name in data:
                 d, self.relationships[
                     class_name
